@@ -10,8 +10,10 @@ that a `number` cannot hold exactly.
 - `decimals` only sets the scale of `units` (the integer in base units, such as wei) and of
   `toString`. Arithmetic and comparison use `raw`, so the decimals of an operand do not change
   a result. A result keeps the decimals of `this`.
-- `mul`, `div`, `sqrt`, `units` and `toString` cut the digits they drop toward zero. Only
-  `round` rounds. — `src/bn/round.ts`
+- `mul`, `div`, `sqrt`, `units`, `toString` and `format` cut the digits they drop toward zero.
+  Only `round` rounds, and `format` when the caller passes a `rounding` mode. — `src/bn/round.ts`
+- `format` builds display text: a prefix, the sign, integer groups, the decimal separator,
+  fraction groups and a suffix. `toString` is `format` with no groups. — `src/bn/format.ts`
 - Three factories: `BN.from` reads a decimal number (`'1.5'`, `1.5`, `'15e-1'`), `BN.fromUnits`
   reads an integer in base units or a hex string, and `BN.parse` reads untrusted text and returns
   a `Result`. `from` and `parse` share one parser. — `src/bn/parse.ts`
@@ -27,6 +29,8 @@ that a `number` cannot hold exactly.
   million-digit fraction otherwise takes seconds to build. A test with the guard deleted fails.
 - **`round` reads every dropped digit**, not only the first one, and works for values between
   -1 and 0.
+- **Display text never shows `-0`.** A negative value that `format` or `toString` cuts to zero
+  prints without a minus.
 
 ## Decisions
 
@@ -55,13 +59,30 @@ that a `number` cannot hold exactly.
 - **`BN` is a public class** with static `PRECISION` and `MAX_UINT256` — `instanceof BN` works,
   and the constructor is `protected`, so the factories are the only way in. Against the
   `dd:ts:library` rule to hide implementation classes, for the same reason as `Ok` / `Err`.
+- **`format` cuts toward zero by default; `rounding` is optional** — a balance shown rounded up
+  can be more than the holder can send, so `0.9999` shows as `0.99`. Rejected `HalfUp` as the
+  default, the default of `round`, because display text must not promise digits the value lacks.
+- **`format` shows the decimals of the value by default** — `format()` gives the digits of
+  `toString` plus groups. Rejected an integer-only default, because then the fraction goes
+  missing without a sign.
+- **`format` with more `decimals` than the value has reads the hidden `raw` digits** —
+  `BN.from('1.25', 1).format({ decimals: 2 })` gives `'1.25'`, as `round(2)` does.
+- **Fraction groups count from the decimal separator** (`'0.12_31_2'`), and every separator can
+  be several characters (`'&nbsp;'`). Rejected grouping the fraction from its end.
+- **The prefix goes before the minus** — `'USD -5.00'`. A currency sign that must follow the
+  minus is the caller's to build.
+- **Options per call, no global format config** — a caller keeps one `BnFormatOptions` object to
+  format many values the same way. Rejected a global default, for the same reason as the global
+  precision.
+- **Own formatter, not `Intl.NumberFormat`** — the output is the same on every runtime, and it has
+  fraction groups and free separators. Rejected `Intl`, which keeps every digit of a decimal
+  string, but has no fraction groups and depends on the ICU data of the runtime.
 - **`bn.ts` is over 200 lines** — a class cannot split across files, and every public member has
   TSDoc. The parser, the rounding and the string output live in siblings.
 
 ## Known gaps
 
 - `pow` takes only a non-negative integer exponent.
-- There is no `format()` with group separators, a prefix or a suffix. `toString` is the only
-  text output.
+- `format` has no locales, and it does not trim trailing zeros.
 - An unknown `BnRounding` value from plain JavaScript throws a `TypeError`, but no test covers it,
   because a typed test cannot pass one without a cast.

@@ -1,4 +1,5 @@
 export * from './bn'
 export * from './enums'
 export * from './errors'
+export type { BnFormatOptions } from './format'
 export type { BnValue } from './parse'

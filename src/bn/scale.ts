@@ -1,4 +1,4 @@
-import { assert } from '#helpers'
+import { assert, isIntegerIn } from '#helpers'
 
 /** The number of fraction digits in {@link BN.raw}. */
 export const PRECISION = 26
@@ -12,7 +12,7 @@ export const unitOf = (decimals: number): bigint => tens(PRECISION - decimals)
 /** Returns `count`, or throws a `TypeError` when it is not an integer in `0..PRECISION`. */
 export const checkDigits = (count: number, name: string): number => {
   assert(
-    Number.isInteger(count) && count >= 0 && count <= PRECISION,
+    isIntegerIn(count, 0, PRECISION),
     `BN: ${name} must be an integer from 0 to ${PRECISION}, got ${count}`,
   )
 

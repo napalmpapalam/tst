@@ -1,9 +1,9 @@
-import { assert, compareBigInt, sqrtBigInt } from '#helpers'
+import { assert, compareBigInt, isIntegerIn, sqrtBigInt } from '#helpers'
 import { ok, type Result } from '#result'
 
 import { BnDecimals, BnRounding } from './enums'
 import type { BnParseError } from './errors'
-import { formatUnits } from './format'
+import { type BnFormatOptions, formatUnits } from './format'
 import { type BnValue, parseDecimal, parseUnits } from './parse'
 import { roundRaw } from './round'
 import { checkDigits, PRECISION, tens, unitOf } from './scale'
@@ -140,11 +140,7 @@ export class BN {
    * @throws TypeError when `exponent` is not a non-negative integer.
    */
   public pow(exponent: number): BN {
-    assert(
-      Number.isInteger(exponent) && exponent >= 0,
-      `BN: exponent must be a non-negative integer, got ${exponent}`,
-    )
-
+    assert(isIntegerIn(exponent, 0), `BN: exponent must be a non-negative integer, got ${exponent}`)
     if (!exponent) return this.#with(ONE)
     return this.#with(this.#raw ** BigInt(exponent) / ONE ** BigInt(exponent - 1))
   }
@@ -232,9 +228,20 @@ export class BN {
     return this.#with(roundRaw(this.#raw, checkDigits(places, 'places'), mode))
   }
 
+  /**
+   * Returns display text, such as `'USD 1,234.50'`, cut toward zero by default.
+   *
+   * @throws TypeError when `opts.decimals` or a group size is out of range.
+   */
+  public format(opts: BnFormatOptions = {}): string {
+    const decimals = checkDigits(opts.decimals ?? this.#decimals, 'decimals')
+    const raw = roundRaw(this.#raw, decimals, opts.rounding ?? BnRounding.Down)
+    return formatUnits(raw / unitOf(decimals), decimals, opts)
+  }
+
   /** Returns the value with exactly `decimals` fraction digits, such as `'-0.001123'`. */
   public toString(): string {
-    return formatUnits(this.units, this.#decimals)
+    return this.format({ groupSize: 0 })
   }
 
   /** Returns {@link BN.units} as a string, which JSON can hold without losing digits. */
