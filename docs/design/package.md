@@ -6,7 +6,12 @@ covers how the areas are exposed.
 ## How it works
 
 - Each area lives in `src/<area>/` and has its own barrel `src/<area>/index.ts`.
-- `package.json` `exports` lists one subpath per area (`./result`). There is no `.` entry.
+- `package.json` `exports` lists one subpath per area (`./result`, `./fetcher`, `./helpers`).
+  There is no `.` entry.
+- `helpers` holds small pure functions that more than one area can use, such as `isPlainObject` and `anySignal`.
+  They are public too.
+- One area imports another through `package.json` `imports`: `#*` maps to `src/*/index.ts`, so
+  `fetcher` imports `#result`. Shared test helpers are `#tests` (`src/tests/`).
 - The `exports` map points at the `.ts` source. Bun and TS-aware bundlers can import it, but
   Node cannot. A build to `dist/` is not there yet (see Known gaps).
 
@@ -21,10 +26,17 @@ covers how the areas are exposed.
   one package per area.
 - **No root barrel** — rejected, because a root barrel loads every area and its dependencies for
   every consumer.
+- **`package.json` `imports` (`#result`) for cross-area imports** — against the `dd:ts:core`
+  `@/` alias rule. Node, TypeScript, Bun and bundlers resolve `#` imports against this package.
+  Rejected tsconfig `paths` (`@/`): a consumer resolves them with its own tsconfig, so a consumer
+  with its own `@/result` failed to type-check the shipped source, and `tsc` keeps `@/` in the
+  `.d.ts` files.
 - **`#field` for private members** — against the `dd:ts:library` rule; accepted that instances
   throw inside a Vue/MobX/Valtio `Proxy`.
 
 ## Known gaps
 
 - No build: no `dist/`, no `.d.ts`, no `files` field. The package cannot be published yet.
+- A consumer that maps `#*` in its own tsconfig `paths` overrides the package `imports` while
+  `exports` points at the `.ts` source.
 - `bun lint` needs a Bun canary build until a stable release has it.

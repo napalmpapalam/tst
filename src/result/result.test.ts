@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
+import { errorOf } from '#tests'
+
 import { Err, err, Ok, ok, Result } from './result'
 
 class ParseError extends Error {
@@ -13,8 +15,6 @@ const parse = (raw: string): number => {
 
   return n
 }
-
-const errorOf = <T, E>(res: Result<T, E>): E | undefined => (res.ok ? undefined : res.error)
 
 describe('Result', () => {
   describe('ok', () => {

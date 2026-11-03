@@ -7,7 +7,12 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./result": "./src/result/index.ts"
+    "./result": "./src/result/index.ts",
+    "./fetcher": "./src/fetcher/index.ts",
+    "./helpers": "./src/helpers/index.ts"
+  },
+  "imports": {
+    "#*": "./src/*/index.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4"
