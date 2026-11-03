@@ -9,7 +9,8 @@
   "exports": {
     "./result": "./src/result/index.ts",
     "./fetcher": "./src/fetcher/index.ts",
-    "./helpers": "./src/helpers/index.ts"
+    "./helpers": "./src/helpers/index.ts",
+    "./bn": "./src/bn/index.ts"
   },
   "imports": {
     "#*": "./src/*/index.ts"

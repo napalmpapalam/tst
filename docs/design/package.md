@@ -6,10 +6,10 @@ covers how the areas are exposed.
 ## How it works
 
 - Each area lives in `src/<area>/` and has its own barrel `src/<area>/index.ts`.
-- `package.json` `exports` lists one subpath per area (`./result`, `./fetcher`, `./helpers`).
+- `package.json` `exports` lists one subpath per area (`./result`, `./fetcher`, `./helpers`, `./bn`).
   There is no `.` entry.
-- `helpers` holds small pure functions that more than one area can use, such as `isPlainObject` and `anySignal`.
-  They are public too.
+- `helpers` holds small pure functions that are not tied to one area, such as `isPlainObject`,
+  `anySignal` and `assert`. They are public too.
 - One area imports another through `package.json` `imports`: `#*` maps to `src/*/index.ts`, so
   `fetcher` imports `#result`. Shared test helpers are `#tests` (`src/tests/`).
 - The `exports` map points at the `.ts` source. Bun and TS-aware bundlers can import it, but
@@ -31,6 +31,9 @@ covers how the areas are exposed.
   Rejected tsconfig `paths` (`@/`): a consumer resolves them with its own tsconfig, so a consumer
   with its own `@/result` failed to type-check the shipped source, and `tsc` keeps `@/` in the
   `.d.ts` files.
+- **`assert` from `helpers` throws a `TypeError`** — the package uses it to check a caller's
+  argument, and a bad argument is a `TypeError` (see [result](result.md)). Rejected a plain
+  `Error`, because then a caller cannot tell a bad argument from other failures.
 - **`#field` for private members** — against the `dd:ts:library` rule; accepted that instances
   throw inside a Vue/MobX/Valtio `Proxy`.
 
