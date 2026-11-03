@@ -1,0 +1,15 @@
+{
+  "name": "@napalmpapalam/tst",
+  "version": "0.0.0",
+  "description": "Small TypeScript toolkit",
+  "license": "MIT",
+  "author": "Semen Loktionov",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./result": "./src/result/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4"
+  }
+}
