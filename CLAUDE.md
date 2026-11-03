@@ -15,6 +15,7 @@ bun fmt --check   # format
 bun lint          # needs a Bun canary build for now
 bun check         # types
 bun test
+bun run build     # dist/, runs before npm pack and publish
 ```
 
 ## Conventions

@@ -1,25 +1,56 @@
 {
   "name": "@napalmpapalam/tst",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Small TypeScript toolkit",
   "license": "MIT",
   "author": "Semen Loktionov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/napalmpapalam/tst.git"
+  },
   "type": "module",
   "sideEffects": false,
+  "engines": {
+    "node": ">=22.12"
+  },
   "exports": {
-    "./result": "./src/result/index.ts",
-    "./fetcher": "./src/fetcher/index.ts",
-    "./helpers": "./src/helpers/index.ts",
-    "./bn": "./src/bn/index.ts",
-    "./time": "./src/time/index.ts"
+    "./result": {
+      "types": "./dist/types/result/index.d.ts",
+      "default": "./dist/result/index.js"
+    },
+    "./fetcher": {
+      "types": "./dist/types/fetcher/index.d.ts",
+      "default": "./dist/fetcher/index.js"
+    },
+    "./helpers": {
+      "types": "./dist/types/helpers/index.d.ts",
+      "default": "./dist/helpers/index.js"
+    },
+    "./bn": {
+      "types": "./dist/types/bn/index.d.ts",
+      "default": "./dist/bn/index.js"
+    },
+    "./time": {
+      "types": "./dist/types/time/index.d.ts",
+      "default": "./dist/time/index.js"
+    }
   },
   "imports": {
     "#*": "./src/*/index.ts"
   },
-  "devDependencies": {
-    "@types/bun": "^1.4.4"
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun fmt --check && bun lint && bun check && bun test"
   },
   "dependencies": {
     "dayjs": "^1.11.23"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "^7.0.2"
   }
 }
