@@ -6,8 +6,8 @@ covers how the areas are exposed.
 ## How it works
 
 - Each area lives in `src/<area>/` and has its own barrel `src/<area>/index.ts`.
-- `package.json` `exports` lists one subpath per area (`./result`, `./fetcher`, `./helpers`, `./bn`).
-  There is no `.` entry.
+- `package.json` `exports` lists one subpath per area (`./result`, `./fetcher`, `./helpers`, `./bn`,
+  `./time`). There is no `.` entry.
 - `helpers` holds small pure functions that are not tied to one area, such as `isPlainObject`,
   `anySignal` and `assert`. They are public too.
 - One area imports another through `package.json` `imports`: `#*` maps to `src/*/index.ts`, so

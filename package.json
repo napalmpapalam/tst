@@ -10,12 +10,16 @@
     "./result": "./src/result/index.ts",
     "./fetcher": "./src/fetcher/index.ts",
     "./helpers": "./src/helpers/index.ts",
-    "./bn": "./src/bn/index.ts"
+    "./bn": "./src/bn/index.ts",
+    "./time": "./src/time/index.ts"
   },
   "imports": {
     "#*": "./src/*/index.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.23"
   }
 }
