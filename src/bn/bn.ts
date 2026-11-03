@@ -43,9 +43,7 @@ export class BN {
    * @throws TypeError when `value` is not a decimal number, or `decimals` is out of range.
    */
   public static from(value: BnValue, decimals: number = BnDecimals.Wei): BN {
-    const res = parseDecimal(String(value))
-    if (!res.ok) throw new TypeError(res.error.message, { cause: res.error })
-    return new BN(res.value, checkDigits(decimals, 'decimals'))
+    return new BN(parseDecimal(String(value)).unwrap(), checkDigits(decimals, 'decimals'))
   }
 
   /**

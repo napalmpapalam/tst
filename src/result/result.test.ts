@@ -39,6 +39,24 @@ describe('Result', () => {
     })
   })
 
+  describe('unwrap', () => {
+    test('should return the value of an Ok', () => {
+      expect(ok(42).unwrap()).toBe(42)
+    })
+
+    test('should throw a TypeError with the error as its cause', () => {
+      const error = new ParseError('bad')
+
+      const thrown = errorOf(Result.try((): number => err(error).unwrap(), TypeError))
+
+      expect(thrown.cause).toBe(error)
+    })
+
+    test('should use a non-Error error as the message', () => {
+      expect(() => err('bad').unwrap()).toThrow('bad')
+    })
+  })
+
   describe('try', () => {
     test('should return Ok when a sync function returns', () => {
       const res = Result.try(() => parse('7'), ParseError)

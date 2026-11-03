@@ -6,6 +6,11 @@ export class Ok<T> {
   public constructor(value: T) {
     this.value = value
   }
+
+  /** Returns the value. */
+  public unwrap(): T {
+    return this.value
+  }
 }
 
 /** A failed {@link Result} that holds an error. */
@@ -15,6 +20,17 @@ export class Err<E> {
 
   public constructor(error: E) {
     this.error = error
+  }
+
+  /**
+   * Throws the error as the `cause` of a `TypeError`: unwrap only a result that a correct program
+   * cannot fail, such as a parse of a literal in code.
+   *
+   * @throws TypeError always.
+   */
+  public unwrap(): never {
+    const message = this.error instanceof Error ? this.error.message : String(this.error)
+    throw new TypeError(message, { cause: this.error })
   }
 }
 

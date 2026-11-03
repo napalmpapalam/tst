@@ -8,6 +8,9 @@ expected way. A caller reads the outcome with an `ok` check, not with `try`/`cat
 - `Ok<T>` and `Err<E>` are classes with a literal `readonly ok` (`true` / `false`).
   `Result<T, E>` is their union, so `res.ok` narrows it. `instanceof Err` narrows it too.
 - `ok()` and `err()` build the two variants.
+- `unwrap()` returns the value of an `Ok`. On an `Err` it throws a `TypeError` with the error as
+  its `cause`. A factory uses it when a failed parse means a bad argument, such as `BN.from` and
+  `Time.from`.
 - `Result.try(fn, errorClass)` runs `fn`. It returns `Ok` with the value, or `Err` when `fn`
   throws an instance of `errorClass`. When `fn` returns a `Promise`, it awaits it and returns a
   `Promise<Result>`. — `src/result/result.ts`
@@ -34,6 +37,9 @@ expected way. A caller reads the outcome with an `ok` check, not with `try`/`cat
   everything and casts it to `E`, and its `[E | null, T | null]` tuple does not narrow.
 - **One conditional signature for `Result.try`** — rejected sync and async overloads: a `fn` typed
   `() => number | Promise<number>` matched the sync overload, and the type hid a `Promise`.
+- **`unwrap()` throws a `TypeError`** — a caller unwraps only a result that a correct program
+  cannot fail, so an `Err` there is a programmer error. Rejected rethrowing the error itself,
+  because then a bad argument to `BN.from` looks like an expected `BnParseError`.
 - **No `map`, `unwrapOr` or `match`** — no call site needs them yet. Add one when a call site
   does.
 
