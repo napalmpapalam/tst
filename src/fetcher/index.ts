@@ -1,4 +1,5 @@
 export * from './errors'
 export * from './fetcher'
+export type { FetcherInterceptor } from './interceptor'
 export * from './types'
 export type { StandardSchemaV1 } from './standard-schema'

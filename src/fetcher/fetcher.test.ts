@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 
 import { isPlainObject } from '#helpers'
-import { errorOf, valueOf } from '#tests'
+import { apiUrl, errorOf, serve, type TestRoute, type TestServer, valueOf } from '#tests'
 
 import {
   FetcherAbortError,
@@ -42,7 +42,7 @@ const echo = async (req: Request): Promise<Response> => {
   })
 }
 
-const ROUTES: Record<string, (req: Request) => Response | Promise<Response>> = {
+const ROUTES: Record<string, TestRoute> = {
   '/api/user': () => Response.json({ id: 1 }),
   '/api/echo': echo,
   '/api/text': () => new Response('hello'),
@@ -60,16 +60,13 @@ const ROUTES: Record<string, (req: Request) => Response | Promise<Response>> = {
   },
 }
 
-let server: ReturnType<typeof Bun.serve>
+let server: TestServer
 let baseUrl: string
 let api: Fetcher
 
 beforeAll(() => {
-  server = Bun.serve({
-    port: 0,
-    fetch: req => ROUTES[new URL(req.url).pathname]?.(req) ?? new Response(null, { status: 500 }),
-  })
-  baseUrl = new URL('/api', server.url).href
+  server = serve(ROUTES)
+  baseUrl = apiUrl(server)
   api = new Fetcher({ baseUrl })
 })
 

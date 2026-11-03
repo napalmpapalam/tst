@@ -1,3 +1,4 @@
+import type { FetcherInterceptor } from './interceptor'
 import type { StandardSchemaV1 } from './standard-schema'
 
 /** The HTTP methods that {@link Fetcher} sends. */
@@ -24,6 +25,8 @@ export type FetcherConfig = FetcherInit & {
   headers?: HeadersInit
   /** Milliseconds before a request fails with a timeout, or `false` for none. Default 60 s. */
   timeout?: number | false
+  /** Hooks around every request. `with()` adds to them. */
+  interceptors?: readonly FetcherInterceptor[]
 }
 
 /** A query value. `undefined` skips the key, and an array repeats it. */
@@ -45,6 +48,8 @@ export type FetcherRequestOpts<S extends StandardSchemaV1 = never> = {
   timeout?: number | false
   /** Aborts the request. The result is then a `FetcherAbortError`. */
   signal?: AbortSignal
+  /** Lets {@link Fetcher.abort} abort the request. Several requests can share one id. */
+  id?: string
   /** Validates the body of a 2xx response and types `data` from it. */
   schema?: S
 }

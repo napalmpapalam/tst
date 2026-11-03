@@ -9,6 +9,7 @@ import {
   FetcherParseError,
   FetcherTimeoutError,
 } from './errors'
+import { type FetcherInterceptor, fetchIntercepted, interceptRequest } from './interceptor'
 import { buildInit, buildUrl } from './request'
 import { type FetcherBadJson, readBody, toFetcherResponse, validate } from './response'
 import type { StandardSchemaV1 } from './standard-schema'
@@ -20,19 +21,31 @@ import type {
   FetcherResponse,
 } from './types'
 
+/** The config that {@link prepare} reads: all of it but the hooks. */
+export type FetcherSendConfig = Omit<FetcherConfig, 'interceptors'>
+
+/** A request to send, and the timeout signal it runs under. */
+export type FetcherPrepared = {
+  request: Request
+  timeout: AbortSignal | undefined
+}
+
 /** A response with its body read, before the status and the schema are checked. */
 export type FetcherReceived = {
+  /** The request as sent, after the request hooks. */
+  request: Request
   response: Response
   body: Result<unknown, FetcherBadJson>
 }
 
 const DEFAULT_TIMEOUT = 60_000
 
-/** Returns the `Request` for `req` and the timeout signal it runs under. */
+/** Returns the `Request` for `req`. It aborts on the timeout, `req.signal` or `keyed`. */
 export const prepare = (
-  config: FetcherConfig,
+  config: FetcherSendConfig,
   req: FetcherRequest<StandardSchemaV1>,
-): { request: Request; timeout: AbortSignal | undefined } => {
+  keyed?: AbortSignal,
+): FetcherPrepared => {
   const { baseUrl, headers, timeout = DEFAULT_TIMEOUT, ...init } = config
   const ms = req.timeout ?? timeout
   const timeoutSignal = ms === false ? undefined : AbortSignal.timeout(ms)
@@ -45,30 +58,26 @@ export const prepare = (
     ...init,
     ...buildInit(shared, req),
     method: req.method,
-    signal: anySignal([timeoutSignal, req.signal]),
+    signal: anySignal([timeoutSignal, req.signal, keyed]),
   })
 
   return { request, timeout: timeoutSignal }
 }
 
-/** Sends `request` and reads the body. Returns a failure that ends the request as an `Err`. */
+/** Runs the hooks, sends the request and reads the body. A failure that ends it is an `Err`. */
 export const send = async (
-  request: Request,
+  prepared: FetcherPrepared,
   method: FetcherMethod,
-  timeout: AbortSignal | undefined,
+  interceptors: readonly FetcherInterceptor[],
 ): Promise<Result<FetcherReceived, FetcherError>> => {
-  try {
-    const response = await fetch(request)
-    return ok({ response, body: await readBody(response, method) })
-  } catch (e) {
-    return err(toFetcherError(e, request, timeout))
-  }
+  const sent = await hookRequest(prepared, interceptors)
+  if (!sent.ok) return sent
+  return receive({ ...prepared, request: sent.value }, method, interceptors)
 }
 
 /** Turns a received response into the result: a non-2xx status, a bad body, or the data. */
 export const settle = async <S extends StandardSchemaV1>(
-  request: Request,
-  { response, body }: FetcherReceived,
+  { request, response, body }: FetcherReceived,
   schema?: S,
 ): Promise<Result<FetcherResponse<FetcherData<S>>, FetcherError>> => {
   if (!response.ok) {
@@ -81,6 +90,35 @@ export const settle = async <S extends StandardSchemaV1>(
   const data = await validate(request, body.value, schema)
   if (!data.ok) return data
   return ok(toFetcherResponse(response, data.value))
+}
+
+// Only an abort or a timeout during a request hook is an `Err`. Any other throw is a bug in a hook.
+const hookRequest = async (
+  { request, timeout }: FetcherPrepared,
+  interceptors: readonly FetcherInterceptor[],
+): Promise<Result<Request, FetcherError>> => {
+  try {
+    return ok(await interceptRequest(interceptors, request))
+  } catch (e) {
+    if (!request.signal.aborted) throw e
+
+    return err(toFetcherError(e, request, timeout))
+  }
+}
+
+const receive = async (
+  { request, timeout }: FetcherPrepared,
+  method: FetcherMethod,
+  interceptors: readonly FetcherInterceptor[],
+): Promise<Result<FetcherReceived, FetcherError>> => {
+  try {
+    const response = await fetchIntercepted(interceptors, request)
+    // A response hook may return a response that is not tied to the signal.
+    request.signal.throwIfAborted()
+    return ok({ request, response, body: await readBody(response, method) })
+  } catch (e) {
+    return err(toFetcherError(e, request, timeout))
+  }
 }
 
 // Both a timeout and an abort reject with a DOMException. The signal reason tells which came first.

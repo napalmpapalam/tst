@@ -1,8 +1,10 @@
 import type { Result } from '#result'
 
+import { FetcherAborts } from './aborts'
 import type { FetcherError } from './errors'
+import { type FetcherInterceptor, reportError } from './interceptor'
 import { mergeHeaders } from './request'
-import { prepare, send, settle } from './send'
+import { type FetcherSendConfig, prepare, send, settle } from './send'
 import type { StandardSchemaV1 } from './standard-schema'
 import {
   type FetcherConfig,
@@ -50,7 +52,9 @@ export class Fetcher {
   /** Sends a `DELETE`. */
   public readonly delete: FetcherVerb = this.#verb(FetcherMethod.Delete)
 
-  readonly #config: FetcherConfig
+  readonly #config: FetcherSendConfig
+  readonly #interceptors: readonly FetcherInterceptor[]
+  readonly #aborts = new FetcherAborts()
 
   /** @throws TypeError when `baseUrl` is not an absolute URL. */
   public constructor(config: FetcherConfig) {
@@ -59,15 +63,21 @@ export class Fetcher {
     }
 
     // A copy, so a later change to the caller's object or headers does not reach this instance.
-    this.#config = { ...config, headers: new Headers(config.headers) }
+    const { interceptors = [], ...rest } = config
+    this.#config = { ...rest, headers: new Headers(config.headers) }
+    this.#interceptors = [...interceptors]
   }
 
-  /** Returns a new {@link Fetcher} with `config` merged over this one. Headers merge by name. */
+  /**
+   * Returns a new {@link Fetcher} with `config` merged over this one. Headers merge by name, and
+   * interceptors are added after the current ones.
+   */
   public with(config: Partial<FetcherConfig>): Fetcher {
     return new Fetcher({
       ...this.#config,
       ...config,
       headers: mergeHeaders(this.#config.headers, config.headers),
+      interceptors: [...this.#interceptors, ...(config.interceptors ?? [])],
     })
   }
 
@@ -75,10 +85,34 @@ export class Fetcher {
   public async request<S extends StandardSchemaV1 = never>(
     req: FetcherRequest<S>,
   ): Promise<FetcherResult<S>> {
-    const { request, timeout } = prepare(this.#config, req)
-    const received = await send(request, req.method, timeout)
-    if (!received.ok) return received
-    return settle(request, received.value, req.schema)
+    const result = await this.#track(req)
+
+    // After the id is released, so `abort(id)` does not count a request that has settled.
+    if (!result.ok) await reportError(this.#interceptors, result.error)
+
+    return result
+  }
+
+  /** Aborts every in-flight request with `id`. Returns `false` when there is none. */
+  public abort(id: string): boolean {
+    return this.#aborts.abort(id)
+  }
+
+  #track<S extends StandardSchemaV1>(req: FetcherRequest<S>): Promise<FetcherResult<S>> {
+    const { id } = req
+
+    if (id === undefined) return this.#send(req)
+
+    return this.#aborts.track(id, signal => this.#send(req, signal))
+  }
+
+  async #send<S extends StandardSchemaV1>(
+    req: FetcherRequest<S>,
+    keyed?: AbortSignal,
+  ): Promise<FetcherResult<S>> {
+    const prepared = prepare(this.#config, req, keyed)
+    const received = await send(prepared, req.method, this.#interceptors)
+    return received.ok ? settle(received.value, req.schema) : received
   }
 
   #verb(method: FetcherMethod): FetcherVerb {
