@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { isDefined, isIntegerIn } from './value'
+import { isBigInt, isDefined, isIntegerIn, isNumber, isString } from './value'
 
 describe('isDefined', () => {
   test('should drop only undefined from a list', () => {
@@ -9,6 +9,18 @@ describe('isDefined', () => {
     const defined = list.filter(isDefined)
 
     expect(defined).toEqual([0, '', null, false])
+  })
+})
+
+describe('type checks', () => {
+  const values = ['', 0, Number.NaN, 0n, null, undefined, new String(''), {}]
+
+  test.each([
+    ['isString', isString, ['']],
+    ['isNumber', isNumber, [0, Number.NaN]],
+    ['isBigInt', isBigInt, [0n]],
+  ] as const)('%s should accept only its primitive', (_, check, accepted) => {
+    expect(values.filter(check)).toEqual([...accepted])
   })
 })
 

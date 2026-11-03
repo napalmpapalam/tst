@@ -1,4 +1,4 @@
-import { assert } from '#helpers'
+import { assert, isBigInt, isNumber } from '#helpers'
 import { err, ok, type Result } from '#result'
 
 import { BnParseError } from './errors'
@@ -35,8 +35,8 @@ export const parseDecimal = (text: string): Result<bigint, BnParseError> => {
 
 /** Returns an integer in base units, or throws a `TypeError` when `value` is not one. */
 export const parseUnits = (value: BnValue): bigint => {
-  if (typeof value === 'bigint') return value
-  if (typeof value === 'number') {
+  if (isBigInt(value)) return value
+  if (isNumber(value)) {
     assert(Number.isSafeInteger(value), `BN: ${value} is not a safe integer`)
     return BigInt(value)
   }
